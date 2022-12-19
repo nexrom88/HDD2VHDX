@@ -134,6 +134,11 @@ namespace HDD2VHDX
                 return CloseHandle(this.handle);
             }
 
+            public IntPtr getPointer()
+            {
+                return this.handle;
+            }
+
             public override string ToString()
             {
                 return this.handle.ToString();
@@ -151,6 +156,9 @@ namespace HDD2VHDX
             public Guid DiskId;
             public Int32 MaxPartitionCount;
         }
+
+        [DllImport("kernel32.dll")]
+        public static extern bool GetFileSizeEx(IntPtr hFile, out long lpFileSize);
 
         [DllImportAttribute("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true)]
         public static extern VolumeSafeHandle CreateVolumeFile([InAttribute()][MarshalAsAttribute(UnmanagedType.LPWStr)] String lpFileName, UInt32 dwDesiredAccess, UInt32 dwShareMode, [InAttribute()] IntPtr lpSecurityAttributes, UInt32 dwCreationDisposition, UInt32 dwFlagsAndAttributes, [InAttribute()] IntPtr hTemplateFile);
