@@ -12,61 +12,113 @@ namespace HDD2VHDX
     {
         static void Main(string[] args)
         {
-            //list volumes
-            DriveInfo[] volumes = DriveInfo.GetDrives();
-            List<DriveInfo> availableVolumes = new List<DriveInfo>();
-            int volumeCounter = 0;
-            Console.WriteLine("Available volumes to convert to vhdx:");
-
-            foreach (DriveInfo volume in volumes)
+            //args count valid?
+            if (args.Length != 0 && args.Length != 2)
             {
-                //just use "fixed" volumes
-                if (volume.DriveType.ToString() == "Fixed")
-                {
-                    try
-                    {
-                        string rootPath = volume.RootDirectory.ToString();
-                        string volumeName = volume.VolumeLabel != "" ? volume.VolumeLabel : "nameless volume";
-                        Console.WriteLine(volumeCounter + ") " + volumeName + " (" + rootPath + ")");
-                    }
-                    catch (Exception)
-                    {
-                        //go to next volume on error. e.g. Bitlocker encrypted volume can cause an exception here
-                        continue;    
-                    }
+                Console.WriteLine("Error: invalid arguments.");
+                Console.WriteLine("Usage: HDD2VHDX.exe *source* *destination*");
+                Console.WriteLine(@"Usage example: HDD2VHDX.exe c:\ d:\output.vhdx");
+                Console.WriteLine("Hint: Destination may not contain whitespaces.");
+                Console.Read();
+                return;
+            }
 
+            //args given?
+            bool argsGiven = false;
+            string destinationPath = String.Empty;
+            string selectedVolumeRoot = String.Empty;
+            List<DriveInfo> availableVolumes = null;
+            int selectedVolume = -1;
+            if (args.Length == 2)
+            {
+                //list drives
+                availableVolumes = DriveInfo.GetDrives().ToList();
+
+                selectedVolumeRoot = args[0];
+                destinationPath = args[1];
+                argsGiven = true;
+
+                //look for volume within availableVolumes list
+                int volumeCounter = 0;
+                bool volumeFound = false;
+                foreach (DriveInfo dr in availableVolumes)
+                {
+                    if (dr.RootDirectory.ToString().ToLower() == selectedVolumeRoot.ToLower())
+                    {
+                        //drive found
+                        selectedVolume = volumeCounter;
+                        volumeFound = true;
+                        break;
+                    }
                     volumeCounter++;
-                    availableVolumes.Add(volume);
                 }
 
+                if (!volumeFound)
+                {
+                    Console.WriteLine("Error: source volume cannot be found");
+                    Console.Read();
+                    return;
+                }
             }
-            volumeCounter--;
 
-            Console.WriteLine("Please select the volume to be converted to vhdx file (0 - " + volumeCounter + "):");
-            string volumeString = Console.ReadLine();
-            int selectedVolume;
-            
-            //parse input
-            if (!int.TryParse(volumeString, out selectedVolume))
+            if (!argsGiven)
             {
-                Console.WriteLine("Error: invalid input. Terminating.");
-                Console.Read();
-                return;
+                //list volumes
+                availableVolumes = new List<DriveInfo>();
+                DriveInfo[] volumes = DriveInfo.GetDrives();
+                int volumeCounter = 0;
+                Console.WriteLine("Available volumes to convert to vhdx:");
+
+                foreach (DriveInfo volume in volumes)
+                {
+                    //just use "fixed" volumes
+                    if (volume.DriveType.ToString() == "Fixed")
+                    {
+                        try
+                        {
+                            string rootPath = volume.RootDirectory.ToString();
+                            string volumeName = volume.VolumeLabel != "" ? volume.VolumeLabel : "nameless volume";
+                            Console.WriteLine(volumeCounter + ") " + volumeName + " (" + rootPath + ")");
+                        }
+                        catch (Exception)
+                        {
+                            //go to next volume on error. e.g. Bitlocker encrypted volume can cause an exception here
+                            continue;
+                        }
+
+                        volumeCounter++;
+                        availableVolumes.Add(volume);
+                    }
+
+                }
+                volumeCounter--;
+
+                Console.WriteLine("Please select the volume to be converted to vhdx file (0 - " + volumeCounter + "):");
+                string volumeString = Console.ReadLine();
+
+                //parse input
+                if (!int.TryParse(volumeString, out selectedVolume))
+                {
+                    Console.WriteLine("Error: invalid input. Terminating.");
+                    Console.Read();
+                    return;
+                }
+
+                //input is in the given range?
+                if (selectedVolume > volumeCounter || selectedVolume < 0)
+                {
+                    Console.WriteLine("Error: invalid input. Terminating.");
+                    Console.Read();
+                    return;
+                }
+
+                selectedVolumeRoot = availableVolumes[selectedVolume].RootDirectory.ToString();
+
+                //ask user for vhdx destination path
+                Console.WriteLine("Where to put final vhdx file? (example: c:\\temp\\output.vhdx)");
+                destinationPath = Console.ReadLine();
+
             }
-
-            //input is in the given range?
-            if (selectedVolume > volumeCounter || selectedVolume < 0)
-            {
-                Console.WriteLine("Error: invalid input. Terminating.");
-                Console.Read();
-                return;
-            }
-
-            string selectedVolumeRoot = availableVolumes[selectedVolume].RootDirectory.ToString();
-
-            //ask user for vhdx destination path
-            Console.WriteLine("Where to put final vhdx file? (example: c:\\temp\\output.vhdx)");
-            string destinationPath = Console.ReadLine();
             
             //add ".vhdx" if necessary
             if (!destinationPath.EndsWith(".vhdx"))

@@ -26,7 +26,6 @@ namespace HDD2VHDX
             DeviceIO.OPEN_EXISTING,
             DeviceIO.FILE_FLAG_NO_BUFFERING | DeviceIO.FILE_FLAG_WRITE_THROUGH,
             IntPtr.Zero);
-            int a = Marshal.GetLastWin32Error();
         }
 
         public DeviceWrapper(DeviceIO.VolumeSafeHandle volumeHandle)
