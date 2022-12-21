@@ -163,6 +163,8 @@ namespace HDD2VHDX
         [DllImportAttribute("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true)]
         public static extern VolumeSafeHandle CreateVolumeFile([InAttribute()][MarshalAsAttribute(UnmanagedType.LPWStr)] String lpFileName, UInt32 dwDesiredAccess, UInt32 dwShareMode, [InAttribute()] IntPtr lpSecurityAttributes, UInt32 dwCreationDisposition, UInt32 dwFlagsAndAttributes, [InAttribute()] IntPtr hTemplateFile);
 
+        [DllImport("kernel32.dll")]
+        public static extern bool SetFilePointerEx(VolumeSafeHandle hFile, long liDistanceToMove, out long lpNewFilePointer, uint dwMoveMethod);
 
         [DllImportAttribute("kernel32.dll", EntryPoint = "DeviceIoControl", SetLastError = true)]
         [return: MarshalAsAttribute(UnmanagedType.Bool)]

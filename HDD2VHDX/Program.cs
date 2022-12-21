@@ -167,7 +167,7 @@ namespace HDD2VHDX
             //open the newly created file
             VirtualDiskHandler diskHandler = new VirtualDiskHandler(destinationPath);
             bool err;
-            err = diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.All);
+            err = diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.All | VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations);
             err = diskHandler.attach(VirtualDiskHandler.ATTACH_VIRTUAL_DISK_FLAG.ATTACH_VIRTUAL_DISK_FLAG_PERMANENT_LIFETIME);
             string mountedPath = diskHandler.getAttachedPath();
 
@@ -202,7 +202,17 @@ namespace HDD2VHDX
             Console.Write("Converting volume to vhdx:");
             while (bytesRead > 0)
             {
-                writer.write(buffer, bytesRead);
+                //just zeroes?
+                bool isArrayEmpty = buffer.All(o => o == 0);
+                if (!isArrayEmpty)
+                {
+                    writer.write(buffer, bytesRead);
+                }
+                else
+                {
+                    writer.setFilePointer(buffer.LongLength);
+                }
+
                 bytesRead = reader.read((uint)buffer.Length, buffer);
                 bytesTotal += bytesRead;
 
@@ -213,12 +223,20 @@ namespace HDD2VHDX
                     Console.Write("\rConverting volume to vhdx: " + percentage + "%");
                 }
             }
-            Console.Write("\rConverting volume to vhdx: completed");
+            Console.WriteLine("\rConverting volume to vhdx: completed");
 
             //close all handles
             reader.close();
             writer.close();
             diskHandler.detach();
+            diskHandler.close();
+
+
+
+            //reopen and reattach vhdx, then shrink vhdx file
+            Console.WriteLine("Trying to shrink output file. This might take some time...");
+            diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations | VirtualDiskHandler.VirtualDiskAccessMask.AttachReadOnly);
+            diskHandler.shrinkFile();
             diskHandler.close();
 
             //delete vhdx snaphsot

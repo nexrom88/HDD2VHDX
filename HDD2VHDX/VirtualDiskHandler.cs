@@ -41,6 +41,9 @@ namespace HDD2VHDX
         public static extern Int32 DetachVirtualDisk(VirtualDiskSafeHandle VirtualDiskHandle, DETACH_VIRTUAL_DISK_FLAG flags, uint ProviderSpecificFlags);
 
         [DllImport("virtdisk.dll", CharSet = CharSet.Unicode)]
+        public static extern Int32 CompactVirtualDisk(VirtualDiskSafeHandle VirtualDiskHandle, COMPACT_VIRTUAL_DISK_FLAG flags, IntPtr parameters, IntPtr overlapped);
+
+        [DllImport("virtdisk.dll", CharSet = CharSet.Unicode)]
         public static extern Int32 OpenVirtualDisk(ref VIRTUAL_STORAGE_TYPE type,
         string Path,
         VIRTUAL_DISK_ACCESS_MASK VirtualDiskAccessMask,
@@ -188,6 +191,13 @@ namespace HDD2VHDX
         {
             int retVal = DetachVirtualDisk(this.diskHandle, DETACH_VIRTUAL_DISK_FLAG.DETACH_VIRTUAL_DISK_FLAG_NONE, 0);
             return retVal == ERROR_SUCCESS;
+        }
+
+        //shrinks the current vhdx file
+        public bool shrinkFile()
+        {
+            int errorCode = CompactVirtualDisk(this.diskHandle, COMPACT_VIRTUAL_DISK_FLAG.COMPACT_VIRTUAL_DISK_FLAG_NONE, IntPtr.Zero, IntPtr.Zero);
+            return errorCode == ERROR_SUCCESS;
         }
 
         //gets the virtual hard disk size
@@ -440,6 +450,13 @@ namespace HDD2VHDX
         public enum DETACH_VIRTUAL_DISK_FLAG
         {
             DETACH_VIRTUAL_DISK_FLAG_NONE
+        }
+
+        public enum COMPACT_VIRTUAL_DISK_FLAG
+        {
+            COMPACT_VIRTUAL_DISK_FLAG_NONE,
+            COMPACT_VIRTUAL_DISK_FLAG_NO_ZERO_SCAN,
+            COMPACT_VIRTUAL_DISK_FLAG_NO_BLOCK_MOVES
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

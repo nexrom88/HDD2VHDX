@@ -33,6 +33,13 @@ namespace HDD2VHDX
             this.volumeHandle = volumeHandle;
         }
 
+        //sets the current filepointer, relative to the current position
+        public void setFilePointer(Int64 length)
+        {
+            long newPointer;
+            DeviceIO.SetFilePointerEx(this.volumeHandle, length, out newPointer, 1);
+        }
+
         //reads a given range of bytes
         unsafe public uint read(uint count, byte[] buffer)
         {
