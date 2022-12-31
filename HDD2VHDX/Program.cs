@@ -202,17 +202,7 @@ namespace HDD2VHDX
             Console.Write("Converting volume to vhdx:");
             while (bytesRead > 0)
             {
-                //just zeroes?
-                bool isArrayEmpty = buffer.All(o => o == 0);
-                if (!isArrayEmpty)
-                {
-                    writer.write(buffer, bytesRead);
-                }
-                else
-                {
-                    writer.setFilePointer(buffer.LongLength);
-                }
-
+                writer.write(buffer, bytesRead);
                 bytesRead = reader.read((uint)buffer.Length, buffer);
                 bytesTotal += bytesRead;
 
