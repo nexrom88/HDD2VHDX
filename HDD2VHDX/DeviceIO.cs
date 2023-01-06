@@ -33,6 +33,7 @@ namespace HDD2VHDX
 
         public const int FSCTL_LOCK_VOLUME = 0x00090018;
         public const int FSCTL_DISMOUNT_VOLUME = 0x00090020;
+        public const int FSCTL_GET_VOLUME_BITMAP = 0x0009006F;
 
         public const byte PARTITION_IFS = 0x07;
 
@@ -157,8 +158,8 @@ namespace HDD2VHDX
             public Int32 MaxPartitionCount;
         }
 
-        [DllImport("kernel32.dll")]
-        public static extern bool GetFileSizeEx(IntPtr hFile, out long lpFileSize);
+        [DllImport("kernel32")]
+        public static extern int GetDiskFreeSpace(string lpRootPathName, out int lpSectorsPerCluster, out int lpBytesPerSector, out int lpNumberOfFreeClusters, out int lpTotalNumberOfClusters);
 
         [DllImportAttribute("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true)]
         public static extern VolumeSafeHandle CreateVolumeFile([InAttribute()][MarshalAsAttribute(UnmanagedType.LPWStr)] String lpFileName, UInt32 dwDesiredAccess, UInt32 dwShareMode, [InAttribute()] IntPtr lpSecurityAttributes, UInt32 dwCreationDisposition, UInt32 dwFlagsAndAttributes, [InAttribute()] IntPtr hTemplateFile);

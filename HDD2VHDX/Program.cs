@@ -150,7 +150,6 @@ namespace HDD2VHDX
                 return;
             }
 
-
             //perform vss snapshot
             VSSWrapper vss = new VSSWrapper();
             string[] drivesToSnapshot = new string[1] { selectedVolumeRoot };
@@ -158,6 +157,15 @@ namespace HDD2VHDX
 
             string devicePath = meta.snapshots[0].SnapshotDeviceObject;
 
+            //read cluster size from snapshot source
+            int sectorsPerCluster = 0;
+            int bytesPerSector = 0;
+            int dummy = 0;
+            uint sourceClusterSize;
+            DeviceIO.GetDiskFreeSpace(availableVolumes[selectedVolume].RootDirectory.FullName, out sectorsPerCluster, out bytesPerSector, out dummy, out dummy);
+            sourceClusterSize = (UInt32)sectorsPerCluster * (UInt32)bytesPerSector;
+
+            //read source volume size
             System.IO.DriveInfo drive = availableVolumes[selectedVolume];
             long sourceSize = drive.TotalSize;
 
@@ -190,8 +198,6 @@ namespace HDD2VHDX
             //now write data from source to vhdx file
             DeviceWrapper reader = new DeviceWrapper(devicePath, DeviceIO.GENERIC_READ);
             DeviceWrapper writer = new DeviceWrapper(newVolume.handle);
-
-
 
             byte[] buffer = new byte[16777216];
             byte[] buffert = Enumerable.Repeat((byte)1, 16777216).ToArray();
@@ -235,6 +241,11 @@ namespace HDD2VHDX
 
             //string[] files = System.IO.Directory.GetFileSystemEntries(meta.path);
 
+
+        }
+
+        private static byte[] readClusterBitmap(DeviceIO.VolumeSafeHandle volumeHandle)
+        {
 
         }
     }
