@@ -34,7 +34,7 @@ namespace HDD2VHDX
         }
 
         //gets the underlying volume handle
-        private DeviceIO.VolumeSafeHandle getVolumeHandle()
+        public DeviceIO.VolumeSafeHandle getVolumeHandle()
         {
             return this.volumeHandle;
         }
