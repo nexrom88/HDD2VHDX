@@ -202,7 +202,7 @@ namespace HDD2VHDX
             DeviceWrapper writer = new DeviceWrapper(newVolume.handle);
 
             //get cluster count
-            UInt32 clusterCount = (UInt32)availableVolumes[selectedVolume].TotalSize / sourceClusterSize;
+            UInt32 clusterCount = (UInt32)(availableVolumes[selectedVolume].TotalSize / (long)sourceClusterSize);
 
             //read source volume bitmap
             readClusterBitmap(reader.getVolumeHandle(), clusterCount);
@@ -259,9 +259,12 @@ namespace HDD2VHDX
             int bytesReturned = 0;
             int err;
 
-            fixed (byte* ptr = clusterBitmap) {
-                DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, IntPtr.Zero, 0, (IntPtr)ptr, (int)clusterCount / 8, ref bytesReturned, IntPtr.Zero);
-                err = Marshal.GetLastWin32Error();
+            fixed (byte* inputBufferPtr = new byte[8]) {
+                fixed (byte* ptr = clusterBitmap) {
+                    DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, (int)clusterCount / 8, ref bytesReturned, IntPtr.Zero);
+                    err = Marshal.GetLastWin32Error();
+                    err = err;
+                }
             }
 
             return null;

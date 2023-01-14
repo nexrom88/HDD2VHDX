@@ -37,6 +37,8 @@ namespace HDD2VHDX
 
         public const byte PARTITION_IFS = 0x07;
 
+        public const int MORE_DATA_AVAILABLE = 234;
+
         [StructLayoutAttribute(LayoutKind.Sequential)]
         public struct DRIVE_LAYOUT_INFORMATION_EX
         {
