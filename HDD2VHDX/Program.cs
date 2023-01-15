@@ -164,7 +164,8 @@ namespace HDD2VHDX
             int bytesPerSector = 0;
             int dummy = 0;
             uint sourceClusterSize;
-            DeviceIO.GetDiskFreeSpace(availableVolumes[selectedVolume].RootDirectory.FullName, out sectorsPerCluster, out bytesPerSector, out dummy, out dummy);
+            int totalClusterCount = 0;
+            DeviceIO.GetDiskFreeSpace(availableVolumes[selectedVolume].RootDirectory.FullName, out sectorsPerCluster, out bytesPerSector, out dummy, out totalClusterCount);
             sourceClusterSize = (UInt32)sectorsPerCluster * (UInt32)bytesPerSector;
 
             //read source volume size
@@ -255,13 +256,13 @@ namespace HDD2VHDX
         //reads the volume cluster bitmap from a given volume
         private unsafe static byte[] readClusterBitmap(DeviceIO.VolumeSafeHandle volumeHandle, UInt32 clusterCount)
         {
-            byte[] clusterBitmap = new byte[clusterCount / 8];
+            byte[] clusterBitmap = new byte[(clusterCount / 8)];
             int bytesReturned = 0;
             int err;
 
             fixed (byte* inputBufferPtr = new byte[8]) {
                 fixed (byte* ptr = clusterBitmap) {
-                    DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, (int)clusterCount / 8, ref bytesReturned, IntPtr.Zero);
+                    DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, clusterBitmap.Length, ref bytesReturned, IntPtr.Zero);
                     err = Marshal.GetLastWin32Error();
                     err = err;
                 }
