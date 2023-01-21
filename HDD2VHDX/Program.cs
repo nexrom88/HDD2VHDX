@@ -206,10 +206,12 @@ namespace HDD2VHDX
             UInt32 clusterCount = (UInt32)(availableVolumes[selectedVolume].TotalSize / (long)sourceClusterSize);
 
             //read source volume bitmap
-            readClusterBitmap(reader.getVolumeHandle(), clusterCount);
+            byte[] clusterBitmap = readClusterBitmap(reader.getVolumeHandle(), clusterCount);
 
-            byte[] buffer = new byte[16777216];
-            byte[] buffert = Enumerable.Repeat((byte)1, 16777216).ToArray();
+            UInt64 currentCluster = 0;
+
+            //prepare buffer and align it to cluster size
+            byte[] buffer = new byte[sourceClusterSize];
 
             UInt64 bytesTotal = 0;
             uint bytesRead = reader.read((uint)buffer.Length, buffer);
@@ -253,18 +255,36 @@ namespace HDD2VHDX
 
         }
 
+        private bool isClusterAvailable(byte[] clusterBitmap, UInt64 clusterIndex)
+        {
+            UInt64 byteArrIndex = clusterIndex / 8;
+            
+        }
+
         //reads the volume cluster bitmap from a given volume
         private unsafe static byte[] readClusterBitmap(DeviceIO.VolumeSafeHandle volumeHandle, UInt32 clusterCount)
         {
-            byte[] clusterBitmap = new byte[(clusterCount / 8)];
+            byte[] rawBitmap;
+            byte[] clusterBitmap = new byte[(clusterCount / 8) + 17]; // +17 because of 2x LARGE_INTEGER overhead + 1 byte alignment
             int bytesReturned = 0;
-            int err;
 
             fixed (byte* inputBufferPtr = new byte[8]) {
                 fixed (byte* ptr = clusterBitmap) {
                     DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, clusterBitmap.Length, ref bytesReturned, IntPtr.Zero);
-                    err = Marshal.GetLastWin32Error();
-                    err = err;
+                    Int64 startingLCN = BitConverter.ToInt64(clusterBitmap, 0);
+                    int bitmapSize = (int)BitConverter.ToInt64(clusterBitmap, 8);                    
+                    if (Marshal.GetLastWin32Error() == 0)
+                    {
+                        //build return byte arr
+                        rawBitmap = new byte[bitmapSize];
+                        Marshal.Copy(IntPtr.Add((IntPtr)ptr, 16), rawBitmap, 0, bitmapSize);
+                        return rawBitmap;
+                    }
+                    else
+                    {
+                        return null; //on error return null
+                    }
+                    
                 }
             }
 
