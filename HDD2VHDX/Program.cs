@@ -208,6 +208,8 @@ namespace HDD2VHDX
             //read source volume bitmap
             byte[] clusterBitmap = readClusterBitmap(reader.getVolumeHandle(), clusterCount);
 
+            System.IO.File.WriteAllBytes("e:\\output.bin", clusterBitmap);
+
             UInt64 currentCluster = 0;
 
             //prepare buffer and align it to cluster size
@@ -258,7 +260,16 @@ namespace HDD2VHDX
         private bool isClusterAvailable(byte[] clusterBitmap, UInt64 clusterIndex)
         {
             UInt64 byteArrIndex = clusterIndex / 8;
-            
+            int clusterByte = clusterBitmap[byteArrIndex];
+            UInt64 byteOffset = clusterIndex % 8;
+
+            //shift, so that relevant bit is on the "right end"
+            clusterByte = clusterByte >> (int)byteOffset;
+
+            //compare to bitmask
+            bool clusterAvailable = (clusterByte & 0b1) == 1;
+
+            return clusterAvailable;
         }
 
         //reads the volume cluster bitmap from a given volume
@@ -287,8 +298,6 @@ namespace HDD2VHDX
                     
                 }
             }
-
-            return null;
         }
     }
 }
