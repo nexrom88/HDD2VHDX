@@ -208,7 +208,7 @@ namespace HDD2VHDX
             //read source volume bitmap
             byte[] clusterBitmap = readClusterBitmap(reader.getVolumeHandle(), clusterCount);
 
-            System.IO.File.WriteAllBytes("e:\\output.bin", clusterBitmap);
+            //System.IO.File.WriteAllBytes("e:\\output.bin", clusterBitmap);
 
             UInt64 currentCluster = 0;
 
@@ -216,14 +216,26 @@ namespace HDD2VHDX
             byte[] buffer = new byte[sourceClusterSize];
 
             UInt64 bytesTotal = 0;
-            uint bytesRead = reader.read((uint)buffer.Length, buffer);
             float lastPercentage = 0.0f;
             Console.Write("Converting volume to vhdx:");
-            while (bytesRead > 0)
+            while (currentCluster < (UInt64)clusterBitmap.Length)
             {
-                writer.write(buffer, bytesRead);
-                bytesRead = reader.read((uint)buffer.Length, buffer);
-                bytesTotal += bytesRead;
+                //is current cluster available?
+                if (!isClusterAvailable(clusterBitmap, currentCluster))
+                {
+                    //not available, jump to next cluster
+                    reader.setFilePointer(sourceClusterSize);
+                    writer.setFilePointer(sourceClusterSize);
+                    currentCluster++;
+                    bytesTotal += sourceClusterSize;
+                    continue;
+                }
+
+                reader.read(sourceClusterSize, buffer);
+                writer.write(buffer, sourceClusterSize);
+
+                bytesTotal += sourceClusterSize;
+                currentCluster++;
 
                 //calculate output
                 double percentage = Math.Round((double)((double)bytesTotal / (double)sourceSize) * 100.0, 2);
@@ -257,7 +269,7 @@ namespace HDD2VHDX
 
         }
 
-        private bool isClusterAvailable(byte[] clusterBitmap, UInt64 clusterIndex)
+        private static bool isClusterAvailable(byte[] clusterBitmap, UInt64 clusterIndex)
         {
             UInt64 byteArrIndex = clusterIndex / 8;
             int clusterByte = clusterBitmap[byteArrIndex];
@@ -282,13 +294,13 @@ namespace HDD2VHDX
             fixed (byte* inputBufferPtr = new byte[8]) {
                 fixed (byte* ptr = clusterBitmap) {
                     DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, clusterBitmap.Length, ref bytesReturned, IntPtr.Zero);
-                    Int64 startingLCN = BitConverter.ToInt64(clusterBitmap, 0);
-                    int bitmapSize = (int)BitConverter.ToInt64(clusterBitmap, 8);                    
+                    int err = Marshal.GetLastWin32Error();
+                    Int64 startingLCN = BitConverter.ToInt64(clusterBitmap, 0);                   
                     if (Marshal.GetLastWin32Error() == 0)
                     {
                         //build return byte arr
-                        rawBitmap = new byte[bitmapSize];
-                        Marshal.Copy(IntPtr.Add((IntPtr)ptr, 16), rawBitmap, 0, bitmapSize);
+                        rawBitmap = new byte[bytesReturned];
+                        Marshal.Copy(IntPtr.Add((IntPtr)ptr, 16), rawBitmap, 0, bytesReturned);
                         return rawBitmap;
                     }
                     else
