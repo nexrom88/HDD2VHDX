@@ -234,6 +234,7 @@ namespace HDD2VHDX
                 reader.read(sourceClusterSize, buffer);
                 writer.write(buffer, sourceClusterSize);
 
+
                 bytesTotal += sourceClusterSize;
                 currentCluster++;
 
@@ -256,9 +257,9 @@ namespace HDD2VHDX
 
             //reopen and reattach vhdx, then shrink vhdx file
             Console.WriteLine("Trying to shrink output file. This might take some time...");
-            diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations | VirtualDiskHandler.VirtualDiskAccessMask.AttachReadOnly);
-            diskHandler.shrinkFile();
-            diskHandler.close();
+            //diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations | VirtualDiskHandler.VirtualDiskAccessMask.AttachReadOnly);
+            //diskHandler.shrinkFile();
+            //diskHandler.close();
 
             //delete vhdx snaphsot
             vss.deleteSnapshot(meta.setID);
@@ -294,13 +295,12 @@ namespace HDD2VHDX
             fixed (byte* inputBufferPtr = new byte[8]) {
                 fixed (byte* ptr = clusterBitmap) {
                     DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, clusterBitmap.Length, ref bytesReturned, IntPtr.Zero);
-                    int err = Marshal.GetLastWin32Error();
                     Int64 startingLCN = BitConverter.ToInt64(clusterBitmap, 0);                   
                     if (Marshal.GetLastWin32Error() == 0)
                     {
                         //build return byte arr
-                        rawBitmap = new byte[bytesReturned];
-                        Marshal.Copy(IntPtr.Add((IntPtr)ptr, 16), rawBitmap, 0, bytesReturned);
+                        rawBitmap = new byte[bytesReturned -16];
+                        Marshal.Copy(IntPtr.Add((IntPtr)ptr, 16), rawBitmap, 0, bytesReturned -16);
                         return rawBitmap;
                     }
                     else
