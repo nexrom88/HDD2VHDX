@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,6 +15,12 @@ namespace HDD2VHDX
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("================= HDD2VHDX v" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + " =================");
+            Console.WriteLine("========== Copyright 2023 by Matthias Rohrmüller ==========");
+            Console.WriteLine("================= mr@nexrom.de ================");
+            Console.WriteLine();
+            Console.WriteLine();
+
             //args count valid?
             if (args.Length != 0 && args.Length != 2)
             {
