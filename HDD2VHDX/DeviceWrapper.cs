@@ -33,6 +33,12 @@ namespace HDD2VHDX
             this.volumeHandle = volumeHandle;
         }
 
+        //gets the underlying volume handle
+        public DeviceIO.VolumeSafeHandle getVolumeHandle()
+        {
+            return this.volumeHandle;
+        }
+
         //sets the current filepointer, relative to the current position
         public void setFilePointer(Int64 length)
         {

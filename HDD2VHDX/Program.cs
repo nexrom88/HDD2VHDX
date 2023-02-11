@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -150,7 +152,6 @@ namespace HDD2VHDX
                 return;
             }
 
-
             //perform vss snapshot
             VSSWrapper vss = new VSSWrapper();
             string[] drivesToSnapshot = new string[1] { selectedVolumeRoot };
@@ -158,6 +159,16 @@ namespace HDD2VHDX
 
             string devicePath = meta.snapshots[0].SnapshotDeviceObject;
 
+            //read cluster size from snapshot source
+            int sectorsPerCluster = 0;
+            int bytesPerSector = 0;
+            int dummy = 0;
+            uint sourceClusterSize;
+            int totalClusterCount = 0;
+            DeviceIO.GetDiskFreeSpace(availableVolumes[selectedVolume].RootDirectory.FullName, out sectorsPerCluster, out bytesPerSector, out dummy, out totalClusterCount);
+            sourceClusterSize = (UInt32)sectorsPerCluster * (UInt32)bytesPerSector;
+
+            //read source volume size
             System.IO.DriveInfo drive = availableVolumes[selectedVolume];
             long sourceSize = drive.TotalSize;
 
@@ -191,20 +202,41 @@ namespace HDD2VHDX
             DeviceWrapper reader = new DeviceWrapper(devicePath, DeviceIO.GENERIC_READ);
             DeviceWrapper writer = new DeviceWrapper(newVolume.handle);
 
+            //get cluster count
+            UInt32 clusterCount = (UInt32)(availableVolumes[selectedVolume].TotalSize / (long)sourceClusterSize);
 
+            //read source volume bitmap
+            byte[] clusterBitmap = readClusterBitmap(reader.getVolumeHandle(), clusterCount);
 
-            byte[] buffer = new byte[16777216];
-            byte[] buffert = Enumerable.Repeat((byte)1, 16777216).ToArray();
+            //System.IO.File.WriteAllBytes("e:\\output.bin", clusterBitmap);
+
+            UInt64 currentCluster = 0;
+
+            //prepare buffer and align it to cluster size
+            byte[] buffer = new byte[sourceClusterSize];
 
             UInt64 bytesTotal = 0;
-            uint bytesRead = reader.read((uint)buffer.Length, buffer);
             float lastPercentage = 0.0f;
             Console.Write("Converting volume to vhdx:");
-            while (bytesRead > 0)
+            while (currentCluster < (UInt64)clusterBitmap.Length * 8)
             {
-                writer.write(buffer, bytesRead);
-                bytesRead = reader.read((uint)buffer.Length, buffer);
-                bytesTotal += bytesRead;
+                //is current cluster available?
+                if (!isClusterAvailable(clusterBitmap, currentCluster))
+                {
+                    //not available, jump to next cluster
+                    reader.setFilePointer(sourceClusterSize);
+                    writer.setFilePointer(sourceClusterSize);
+                    currentCluster++;
+                    bytesTotal += sourceClusterSize;
+                    continue;
+                }
+
+                reader.read(sourceClusterSize, buffer);
+                writer.write(buffer, sourceClusterSize);
+
+
+                bytesTotal += sourceClusterSize;
+                currentCluster++;
 
                 //calculate output
                 double percentage = Math.Round((double)((double)bytesTotal / (double)sourceSize) * 100.0, 2);
@@ -224,18 +256,56 @@ namespace HDD2VHDX
 
 
             //reopen and reattach vhdx, then shrink vhdx file
-            Console.WriteLine("Trying to shrink output file. This might take some time...");
-            diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations | VirtualDiskHandler.VirtualDiskAccessMask.AttachReadOnly);
-            diskHandler.shrinkFile();
-            diskHandler.close();
+            //Console.WriteLine("Trying to shrink output file. This might take some time...");
+            //diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations | VirtualDiskHandler.VirtualDiskAccessMask.AttachReadOnly);
+            //diskHandler.shrinkFile();
+            //diskHandler.close();
 
             //delete vhdx snaphsot
             vss.deleteSnapshot(meta.setID);
 
+        }
 
-            //string[] files = System.IO.Directory.GetFileSystemEntries(meta.path);
+        private static bool isClusterAvailable(byte[] clusterBitmap, UInt64 clusterIndex)
+        {
+            UInt64 byteArrIndex = clusterIndex / 8;
+            int clusterByte = clusterBitmap[byteArrIndex];
+            UInt64 byteOffset = clusterIndex % 8;
 
+            //shift, so that relevant bit is on the "right end"
+            clusterByte = clusterByte >> (int)byteOffset;
 
+            //compare to bitmask
+            bool clusterAvailable = (clusterByte & 0b1) == 1;
+
+            return clusterAvailable;
+        }
+
+        //reads the volume cluster bitmap from a given volume
+        private unsafe static byte[] readClusterBitmap(DeviceIO.VolumeSafeHandle volumeHandle, UInt32 clusterCount)
+        {
+            byte[] rawBitmap;
+            byte[] clusterBitmap = new byte[(clusterCount / 8) + 17]; // +17 because of 2x LARGE_INTEGER overhead + 1 byte alignment
+            int bytesReturned = 0;
+
+            fixed (byte* inputBufferPtr = new byte[8]) {
+                fixed (byte* ptr = clusterBitmap) {
+                    DeviceIO.DeviceIoControl(volumeHandle, DeviceIO.FSCTL_GET_VOLUME_BITMAP, (IntPtr)inputBufferPtr, 8, (IntPtr)ptr, clusterBitmap.Length, ref bytesReturned, IntPtr.Zero);
+                    Int64 startingLCN = BitConverter.ToInt64(clusterBitmap, 0);                   
+                    if (Marshal.GetLastWin32Error() == 0)
+                    {
+                        //build return byte arr
+                        rawBitmap = new byte[bytesReturned -16];
+                        Marshal.Copy(IntPtr.Add((IntPtr)ptr, 16), rawBitmap, 0, bytesReturned -16);
+                        return rawBitmap;
+                    }
+                    else
+                    {
+                        return null; //on error return null
+                    }
+                    
+                }
+            }
         }
     }
 }
