@@ -218,7 +218,7 @@ namespace HDD2VHDX
             UInt64 bytesTotal = 0;
             float lastPercentage = 0.0f;
             Console.Write("Converting volume to vhdx:");
-            while (currentCluster < (UInt64)clusterBitmap.Length)
+            while (currentCluster < (UInt64)clusterBitmap.Length * 8)
             {
                 //is current cluster available?
                 if (!isClusterAvailable(clusterBitmap, currentCluster))
@@ -256,17 +256,13 @@ namespace HDD2VHDX
 
 
             //reopen and reattach vhdx, then shrink vhdx file
-            Console.WriteLine("Trying to shrink output file. This might take some time...");
+            //Console.WriteLine("Trying to shrink output file. This might take some time...");
             //diskHandler.open(VirtualDiskHandler.VirtualDiskAccessMask.MetaOperations | VirtualDiskHandler.VirtualDiskAccessMask.AttachReadOnly);
             //diskHandler.shrinkFile();
             //diskHandler.close();
 
             //delete vhdx snaphsot
             vss.deleteSnapshot(meta.setID);
-
-
-            //string[] files = System.IO.Directory.GetFileSystemEntries(meta.path);
-
 
         }
 
